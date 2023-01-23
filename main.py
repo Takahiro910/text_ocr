@@ -49,10 +49,8 @@ if df_l != []:
 
     st.write("プレビュー")
     st.dataframe(df.head())
-    # csvファイルを保存
-    df.to_csv("output.csv", index=False)
 
     # csvファイルをダウンロードするためのUIを作成
     if st.download_button(label='Download CSV', data=df.to_csv().encode("utf-8"), file_name="data.csv", mime='text/csv'):
         st.write("Thank you!")
-        os.remove("output.csv")
+        os.remove("data.csv")
