@@ -13,7 +13,7 @@ KEY = os.environ.get("KEY") # Or write your API KEY directly
 ENDPOINT = os.environ.get("ENDPOINT")
 
 st.title("手書きの表（画像） → CSV")
-st.write("無料につき500枚/月まで。Made by 工藤")
+st.write("無料につき500枚/月まで。Created by 工藤")
 
 df_l = []
 PATH = "."
@@ -40,6 +40,7 @@ if uploaded_files:
         for cell in table_data.cells:
             r, c, text = cell.row_index, cell.column_index, cell.content
             df.loc[r, c] = text
+        df = df[1:]
 
         df_l.append(df)
         os.remove(img_path)
@@ -51,6 +52,6 @@ if df_l != []:
     st.dataframe(df.head())
 
     # csvファイルをダウンロードするためのUIを作成
-    if st.download_button(label='Download CSV', data=df.to_csv().encode("utf-8"), file_name="data.csv", mime='text/csv'):
+    if st.download_button(label='Download CSV', data=df.to_csv(header=False, index=False).encode("utf-8"), file_name="data.csv", mime='text/csv'):
         st.write("Thank you!")
         os.remove("data.csv")
