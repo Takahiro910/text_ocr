@@ -49,9 +49,17 @@ if df_l != []:
     df = pd.concat(df_l)
 
     st.write("プレビュー")
-    st.dataframe(df.head())
+    col1, col2 = st.columns(2)
+    with col1:
+        st.header("Uploaded file")
+        st.image(uploaded_files[0])
+    with col2:
+        st.header("Results")
+        st.dataframe(df.head(10))
 
+    st.header("Download Here!")
     # csvファイルをダウンロードするためのUIを作成
     if st.download_button(label='Download CSV', data=df.to_csv(header=False, index=False).encode("utf-8"), file_name="data.csv", mime='text/csv'):
         st.write("Thank you!")
         os.remove("data.csv")
+        df_l = []
