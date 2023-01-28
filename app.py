@@ -18,7 +18,7 @@ st.write("無料につき500枚/月まで。Created by 工藤")
 df_l = []
 PATH = "."
 
-uploaded_files = st.file_uploader("Upload files", type=["jpg", "png"], accept_multiple_files=True)
+uploaded_files = st.file_uploader("Upload files", type=["jpg", "png", "tif"], accept_multiple_files=True)
 if uploaded_files:
     for file in uploaded_files:
 
