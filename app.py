@@ -21,7 +21,6 @@ PATH = "."
 uploaded_files = st.file_uploader("Upload files", type=["jpg", "png", "tif"], accept_multiple_files=True)
 if uploaded_files:
     for file in uploaded_files:
-
         img_path = os.path.join(PATH, file.name)
         with open(img_path, "wb") as f:
             f.write(file.read())
@@ -40,7 +39,7 @@ if uploaded_files:
         for cell in table_data.cells:
             r, c, text = cell.row_index, cell.column_index, cell.content
             df.loc[r, c] = text
-        df = df[1:]
+        # df = df[1:]
 
         df_l.append(df)
         os.remove(img_path)
