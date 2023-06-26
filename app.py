@@ -25,6 +25,7 @@ if uploaded_files:
         with open(img_path, "wb") as f:
             f.write(file.read())
         img = Image.open(img_path)
+        img = img.convert('RGB')
 
         img_byte_arr = io.BytesIO()
         img.save(img_byte_arr, format='JPEG')
