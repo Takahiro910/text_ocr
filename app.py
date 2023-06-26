@@ -58,7 +58,7 @@ if df_l != []:
 
     st.header("Download Here!")
     # csvファイルをダウンロードするためのUIを作成
-    if st.download_button(label='Download CSV', data=df.to_csv(header=False, index=False).encode("utf-8"), file_name="data.csv", mime='text/csv'):
+    csv = df.to_csv(header=False, index=False).encode('shift-jis')
+    if st.download_button(label='Download CSV', data=csv, file_name="data.csv", mime='text/csv'):
         st.write("Thank you!")
-        os.remove("data.csv")
         df_l = []
