@@ -60,4 +60,4 @@ jobs:
         with:
           app-name: 'table-to-csv'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_C557215A1D4B4E67AA070C6643AA9FE3 }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_D734B24C0E2846E78573B44A7B4DAD7A }}
