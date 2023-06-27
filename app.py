@@ -59,7 +59,7 @@ if df_l != []:
 
     st.header("Download Here!")
     # csvファイルをダウンロードするためのUIを作成
-    csv = df.to_csv(header=False, index=False).encode('shift-jis')
+    csv = df.to_csv(header=False, index=False).encode('shift-jis', 'replace')
     if st.download_button(label='Download CSV', data=csv, file_name="data.csv", mime='text/csv'):
         st.write("Thank you!")
         df_l = []
