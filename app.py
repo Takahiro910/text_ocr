@@ -1,26 +1,79 @@
 from azure.core.credentials import AzureKeyCredential
 from azure.ai.formrecognizer import DocumentAnalysisClient
 from dotenv import load_dotenv
+import fitz
 import io, os
+import numpy as np
 import pandas as pd
 from PIL import Image
 import streamlit as st
+import xlsxwriter # Excelファイル出力
 
 
 # ---Environment---
-load_dotenv(verbose=True, dotenv_path='.env')
-KEY = os.environ.get("KEY") # Or write your API KEY directly
-ENDPOINT = os.environ.get("ENDPOINT")
+try:
+    # Streamlit Cloud
+    KEY = st.secrets["KEY"]
+    ENDPOINT = st.secrets["ENDPOINT"]
+except:
+    # ローカル環境
+    load_dotenv(verbose=True, dotenv_path='.env')
+    KEY = os.environ.get("KEY")
+    ENDPOINT = os.environ.get("ENDPOINT")
 
+# ---Function---
+def pdf_to_images(pdf_file):
+    doc = fitz.open(pdf_file)
+    images = []
+    for page in doc:
+        pix = page.get_pixmap()
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        images.append(img)
+    return images
+
+# ---Main Page---
 st.title("手書きの表（画像） → CSV")
 st.write("無料につき500枚/月まで。Created by 工藤")
 
 df_l = []
 PATH = "."
 
+st.markdown("## PDF to JPEG Converter")
+st.write("PDFファイルはこちらでまず画像に変換してください。")
+st.write("PDFをむりやり画像になおすので粗くて読み取り精度が落ちるかもしれません。")
+uploaded_pdfs = st.file_uploader("Upload a PDF file", type="pdf", accept_multiple_files=True)
+
+if uploaded_pdfs:
+    for pdf in uploaded_pdfs:
+        pdfPath = os.path.join(PATH, pdf.name)
+        with open(pdfPath, "wb") as f:
+            f.write(pdf.read()) # PDFファイルを一時保存
+
+        images = pdf_to_images(pdfPath)
+        os.remove(pdfPath)
+
+    for i, image in enumerate(images):
+        st.image(image, caption=f"Page {i+1}")
+
+        # ダウンロードボタン
+        img_byte_arr = io.BytesIO()
+        image.save(img_byte_arr, format='JPEG')
+        img_byte_arr = img_byte_arr.getvalue()
+        st.download_button(
+            label=f"Download Page {i+1} as JPEG",
+            data=img_byte_arr,
+            file_name=f"page_{i+1}.jpg",
+            mime="image/jpeg",
+        )
+
+
+# ---Main Function---
+st.markdown("## 画像認識")
+st.write("画像の中の表を読み取ってxlsxファイルにして吐き出します。")
+
 uploaded_files = st.file_uploader("Upload files", type=["jpg", "png", "tif"], accept_multiple_files=True)
 if uploaded_files:
-    for file in uploaded_files:
+    for i, file in enumerate(uploaded_files):
         img_path = os.path.join(PATH, file.name)
         with open(img_path, "wb") as f:
             f.write(file.read())
@@ -35,31 +88,35 @@ if uploaded_files:
         poller = document_analysis_client.begin_analyze_document("prebuilt-layout", img_byte_arr)
         response = poller.result()
 
-        table_data = response.tables[0]
-        df = pd.DataFrame(columns=list(range(table_data.column_count)), index=list(range(table_data.row_count)))
-        for cell in table_data.cells:
-            r, c, text = cell.row_index, cell.column_index, cell.content
-            df.loc[r, c] = text
-        # df = df[1:]
+        if response.tables: # 表が存在する場合
+            for j, table_data in enumerate(response.tables): # 複数の表をループ処理
+                df = pd.DataFrame(columns=list(range(table_data.column_count)), index=list(range(table_data.row_count)))
+                for cell in table_data.cells:
+                    r, c, text = cell.row_index, cell.column_index, cell.content
+                    df.loc[r, c] = text
+                # NaN/INF値を空文字に変換 (例)
+                df = df.replace([np.inf, -np.inf], "")
+                df = df.fillna("")
 
-        df_l.append(df)
+                # Excelファイルにシートを追加 (シート名はPDFページ番号と表番号を組み合わせる)
+                if not 'workbook' in locals(): # 最初の表の場合、Excelブックを作成
+                    workbook = xlsxwriter.Workbook("extracted_tables.xlsx")
+                worksheet = workbook.add_worksheet(f"Page_{i+1}_Table_{j+1}") # シート名変更
+
+                # DataFrameをExcelシートに書き込む
+                for row_num, row_data in df.iterrows():
+                    for col_num, cell_data in enumerate(row_data):
+                        worksheet.write(row_num, col_num, cell_data)
         os.remove(img_path)
 
-if df_l != []:
-    df = pd.concat(df_l)
+    if 'workbook' in locals(): # Excelブックが存在する場合
+        workbook.close() # Excelファイルを保存
+        with open("extracted_tables.xlsx", "rb") as f:
+            file_data = f.read()
 
-    st.write("プレビュー")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.header("Uploaded file")
-        st.image(uploaded_files[0])
-    with col2:
-        st.header("Results")
-        st.dataframe(df.head(10))
-
-    st.header("Download Here!")
-    # csvファイルをダウンロードするためのUIを作成
-    csv = df.to_csv(header=False, index=False).encode('shift-jis', 'replace')
-    if st.download_button(label='Download CSV', data=csv, file_name="data.csv", mime='text/csv'):
-        st.write("Thank you!")
-        df_l = []
+        st.download_button(
+            label="Download Tables as XLSX",
+            data=file_data,
+            file_name="extracted_tables.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
